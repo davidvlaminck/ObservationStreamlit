@@ -1,0 +1,11 @@
+[server]
+headless = true
+
+[theme]
+# Streamlit theme is a baseline; streamlit-elements will provide Material UI widgets where used.
+base = "light"
+
+[client]
+# Helps with consistent behavior on mobile browsers.
+showSidebarNavigation = false
+

@@ -1,16 +1,22 @@
-# This is a sample Python script.
+import streamlit as st
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+from app.config import load_config
+from app.router import render_route, render_sidebar
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+def main() -> None:
+    cfg = load_config()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    st.set_page_config(
+        page_title=cfg.app_name,
+        page_icon="🛰️",
+        layout="wide",  # Streamlit will still behave reasonably on mobile; we avoid wide-only assumptions in layout.
+        initial_sidebar_state="auto",
+    )
+
+    route = render_sidebar()
+    render_route(route)
+
+
+if __name__ == "__main__":
+    main()
