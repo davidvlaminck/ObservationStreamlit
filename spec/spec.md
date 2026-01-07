@@ -23,6 +23,10 @@ The initial phase will focus on establishing a connection to a database, impleme
 
 ## 2.4 Data Display
 - Display the fetched data in a user-friendly format (e.g., tables, charts).
+- The user interface should be fast to navigate and in Flemish (Dutch, Belgium).
+
+## 2.5 Data Entry
+- The user should be able to enter new data as fast as possible (few clicks, voice chat) so it works well on a tablet or smartphone.
 
 # 3. Non-Functional Requirements
 ## 3.1 Performance
