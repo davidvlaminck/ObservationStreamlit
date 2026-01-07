@@ -71,12 +71,12 @@ We’ll use two categories of automated tests:
 **Goal:** Users can log in securely and remain authenticated via session state.
 
 **Scope**
-- Username/password login.
+- Username/password login (email used as username).
 - Secure password hashing (salted hash) and verification.
 - Session management in Streamlit (persist login during the session).
 - Logout flow.
-- **Manual account creation** only (registration UI deferred).
-- **Minimal DB persistence for authentication** (just enough to store/validate users).
+- **Admin-managed account creation** only (registration UI deferred). Admin creates accounts using a "New user" flow that generates a one-time temporary password shown to the admin for out-of-band delivery. `must_change_password` enforces password change on first login.
+- Minimal DB persistence for authentication (just enough to store/validate users).
 - UI for auth built with **standard Streamlit first**, then optionally enhanced with `streamlit-elements` components (e.g., nicer form layout).
 - All user-facing strings for auth pages in **Flemish (Dutch, Belgium)**.
 
@@ -85,11 +85,12 @@ We’ll use two categories of automated tests:
 - This keeps the code portable: switching from `sqlite:///...` locally to `postgresql+psycopg://...` in production should be primarily a **configuration change** (DB URL/secrets), not a rewrite.
 
 **Deliverables**
-- Basic user schema/table (username + password hash + metadata).
+- Basic user schema/table (email + password hash + metadata).
 - Minimal DB configuration for the users/auth store (e.g., SQLite in dev; Postgres compatible).
 - Login form + logout control.
 - Basic protected-page gating.
-- Documented manual user creation workflow (script/SQL).
+- Documented manual user creation workflow (admin "New user" flow) and a simple script/utility to create an initial admin account.
+- When the app starts against an empty DB, the system should create an initial admin user automatically. The initial admin email/password are read from environment variables `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` when set; otherwise the default credentials `admin` / `admin` will be used. The initial admin account is created with `must_change_password=true` so the administrator is forced to choose a new password on first login.
 
 **Acceptance Criteria**
 - Invalid credentials fail without revealing details.
@@ -111,6 +112,8 @@ We’ll use two categories of automated tests:
 - Basic operational diagnostics.
 - (Recommended) Introduce migrations (e.g., Alembic) once production DB support matters.
 
+**Important decision**: The project will not add SMTP/email invite or password-reset delivery in Phase 2 — the admin-temp-password (manual) workflow will remain the supported user onboarding and reset method initially.
+
 **SQLAlchemy approach (Core-first)**
 - Use **SQLAlchemy Core** (Tables, columns, `select()`, parameter binding) for schema and queries.
 - Use **Alembic** for migrations.
@@ -119,7 +122,7 @@ We’ll use two categories of automated tests:
 **Deliverables**
 - Single “DB connection” module/function used everywhere (including auth and data access).
 - Clear DB URL/driver configuration for both SQLite and Postgres.
-- User-friendly error message when DB is unreachable/misconfigured.
+- Error handling for connection and query issues.
 - (Optional) A simple “DB ok” diagnostic indicator.
 
 **Acceptance Criteria**
