@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from app.pages import home, login, protected
+from app.pages import home, login, protected, users
 from app.state import get_auth_state
 
 
@@ -16,6 +16,8 @@ def render_sidebar() -> str:
     routes = ["Home"]
     if auth.is_authenticated:
         routes.append("Protected")
+        if auth.is_admin:
+            routes.append("Admin: Users")
     else:
         routes.append("Login")
 
@@ -43,5 +45,11 @@ def render_route(route: str) -> None:
         protected.render()
         return
 
-    st.error(f"Unknown route: {route}")
+    if route == "Admin: Users":
+        if not auth.is_authenticated or not auth.is_admin:
+            st.warning("Admin access required")
+            return
+        users.render()
+        return
 
+    st.error(f"Unknown route: {route}")

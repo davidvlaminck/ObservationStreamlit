@@ -1,17 +1,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
 class AuthState:
-    """Minimal authentication/session state.
+    """Authentication/session state.
 
-    Phase 0: just a boolean gate for protected content.
-    Phase 1: replace with real login + user identity.
+    Phase 0: minimal boolean gate.
+    Phase 1: store authenticated user identity.
     """
 
     is_authenticated: bool = False
+    user_id: Optional[int] = None
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    is_admin: bool = False
+    must_change_password: bool = False
 
 
 AUTH_STATE_KEY = "auth_state"
@@ -28,4 +34,3 @@ def get_auth_state(session_state: dict) -> AuthState:
 
 def logout(session_state: dict) -> None:
     session_state[AUTH_STATE_KEY] = AuthState(is_authenticated=False)
-

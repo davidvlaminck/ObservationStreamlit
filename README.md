@@ -49,6 +49,40 @@ Then open the URL Streamlit prints (usually `http://localhost:8501`).
 
 ---
 
+## Admin bootstrap & account management
+
+On first startup (when the database has no users) the app will automatically create an initial administrator account. By default the account is created with the email `admin` and password `admin` and the account will be marked `must_change_password=true` so the admin is forced to pick a new password on first login.
+
+You can override the default initial admin credentials by setting the environment variables `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` before first run. Example:
+
+```bash
+export INITIAL_ADMIN_EMAIL=you@example.com
+export INITIAL_ADMIN_PASSWORD=some-temporary-password
+streamlit run main.py
+```
+
+Alternatively you can use the included CLI helper to create or reset the admin without starting the app (useful for headless servers):
+
+```bash
+python scripts/create_admin.py --email admin@example.com --password temporarypw
+# or to reset the existing admin's password:
+python scripts/create_admin.py --email admin@example.com --reset
+```
+
+When the admin creates or resets a user's temporary password in the Admin → Users page, the temporary password is displayed once and there is a convenient Copy button to copy it to the clipboard. The app does not send emails — the admin is responsible for communicating the temporary password to the user out-of-band.
+
+---
+
+## Testing
+
+Run the unit tests with pytest:
+
+```bash
+pytest -q
+```
+
+---
+
 ## Notes
 - If `streamlit-elements` is installed, some UI will render using Material UI widgets.
 - If it is not installed, the app falls back to standard Streamlit widgets.
