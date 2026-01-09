@@ -5,6 +5,7 @@ from typing import Optional
 import hashlib
 import base64
 import hmac
+from pathlib import Path
 
 from sqlalchemy import (
     Table,
@@ -24,7 +25,22 @@ from sqlalchemy.engine import Engine
 from datetime import datetime, timezone
 
 
-DB_URL = os.environ.get("DATABASE_URL", "sqlite:///./observations.db")
+def _default_sqlite_url() -> str:
+    """Return a stable default SQLite URL.
+
+    Using a relative URL like `sqlite:///./observations.db` depends on the process CWD.
+    Streamlit can be launched from different working directories (IDE, service, etc.),
+    which would silently create/use a different DB file and look like data "reset".
+
+    We anchor the default DB to the repository root (one level above `app/`).
+    """
+
+    repo_root = Path(__file__).resolve().parents[1]
+    db_path = (repo_root / "observations.db").resolve()
+    return f"sqlite:///{db_path}"
+
+
+DB_URL = os.environ.get("DATABASE_URL") or _default_sqlite_url()
 
 metadata = MetaData()
 

@@ -7,10 +7,9 @@ from app.ui_elements import render_material_card
 
 def render() -> None:
     st.title("Home")
-    st.write("Phase 0: skeleton app.")
+    st.write("Fase 0: basisstructuur van de app.")
 
     render_material_card(
-        "What’s next",
-        "Phase 1 adds real login. Phase 2 standardizes the DB layer. Phase 3 adds real queries and filters.",
+        "Wat volgt",
+        "Fase 1 voegt echte login toe. Fase 2 standaardiseert de DB-laag. Fase 3 voegt echte queries en filters toe.",
     )
-

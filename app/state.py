@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
+import os
 
 
 @dataclass
@@ -21,6 +22,16 @@ class AuthState:
 
 
 AUTH_STATE_KEY = "auth_state"
+ROUTE_OVERRIDE_KEY = "route_override"
+
+
+def is_dev_mode() -> bool:
+    """Return True when running in a development environment.
+
+    We use this to show/hide diagnostic panels in the UI.
+    """
+
+    return (os.environ.get("APP_ENV", "dev") or "dev").strip().lower() == "dev"
 
 
 def get_auth_state(session_state: dict) -> AuthState:
@@ -34,3 +45,13 @@ def get_auth_state(session_state: dict) -> AuthState:
 
 def logout(session_state: dict) -> None:
     session_state[AUTH_STATE_KEY] = AuthState(is_authenticated=False)
+
+
+def set_next_route(session_state: dict, route: str) -> None:
+    """Request a one-time route change on the next render."""
+    session_state[ROUTE_OVERRIDE_KEY] = route
+
+
+def pop_next_route(session_state: dict) -> str | None:
+    """Consume the one-time route override (if any)."""
+    return session_state.pop(ROUTE_OVERRIDE_KEY, None)

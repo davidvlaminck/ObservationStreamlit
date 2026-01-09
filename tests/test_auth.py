@@ -112,5 +112,24 @@ def test_lockout_behavior(tmp_path):
     assert auth.authenticate('lock@example.com', 'stillbad') is None
 
 
+def test_email_normalization_login(tmp_path):
+    db_file = tmp_path / "norm.db"
+    db_url = f"sqlite:///{db_file}"
+    db, auth = reload_modules_with_dburl(db_url)
+    db.init_db()
+
+    eng = db.get_engine()
+    with eng.connect() as conn:
+        admin = conn.execute(db.users.select()).mappings().first()
+
+    created = auth.create_user('CaseUser@Example.Com', 'Case User', created_by_id=admin['id'])
+
+    # should be stored normalized
+    assert created['email'] == 'caseuser@example.com'
+
+    # authenticate with different casing and whitespace
+    assert auth.authenticate('  CASEUSER@EXAMPLE.COM  ', created['temp_password']) is not None
+
+
 if __name__ == '__main__':
     pytest.main([__file__])

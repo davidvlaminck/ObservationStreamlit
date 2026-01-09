@@ -42,7 +42,7 @@ uv pip install -r requirements.txt
 ## Run the app
 
 ```bash
-streamlit run main.py
+APP_ENV=prod streamlit run main.py
 ```
 
 Then open the URL Streamlit prints (usually `http://localhost:8501`).
@@ -73,6 +73,21 @@ When the admin creates or resets a user's temporary password in the Admin → Us
 
 ---
 
+## Database location (avoiding accidental resets)
+
+By default, the app uses a local SQLite database file named `observations.db` **in the repository root**.
+
+Why this matters: a relative SQLite URL like `sqlite:///./observations.db` depends on the process working directory. If you start Streamlit from a different folder (IDE run config, service, etc.), it can silently create a different DB file and it may look like your users/passwords were “reset”.
+
+To explicitly control the DB, set `DATABASE_URL`, for example:
+
+```bash
+export DATABASE_URL=sqlite:////home/davidlinux/PycharmProjects/ObservationStreamlit/observations.db
+streamlit run main.py
+```
+
+---
+
 ## Testing
 
 Run the unit tests with pytest:
@@ -93,4 +108,3 @@ pytest -q
 - `spec/spec.md`  overall requirements
 - `spec/phases.md`  development roadmap
 - `spec/data_model.md`  schema draft (fill this in before Phase 2/3)
-

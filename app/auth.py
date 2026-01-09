@@ -19,7 +19,12 @@ WINDOW_SECONDS = 60
 LOCK_SECONDS = 300
 
 
+def _normalize_email(email: str) -> str:
+    return (email or "").strip().lower()
+
+
 def _record_failed_attempt(email: str) -> None:
+    email = _normalize_email(email)
     now = time.time()
     entry = LOGIN_ATTEMPTS.get(email)
     if not entry:
@@ -36,11 +41,13 @@ def _record_failed_attempt(email: str) -> None:
 
 
 def _clear_attempts(email: str) -> None:
+    email = _normalize_email(email)
     if email in LOGIN_ATTEMPTS:
         del LOGIN_ATTEMPTS[email]
 
 
 def _is_locked(email: str) -> bool:
+    email = _normalize_email(email)
     entry = LOGIN_ATTEMPTS.get(email)
     if not entry:
         return False
@@ -55,6 +62,8 @@ def _is_locked(email: str) -> bool:
 
 
 def authenticate(email: str, password: str) -> Optional[dict]:
+    email = _normalize_email(email)
+
     # simple lockout check
     if _is_locked(email):
         raise AuthLocked("Account temporarily locked due to repeated failed login attempts")
@@ -78,16 +87,18 @@ def authenticate(email: str, password: str) -> Optional[dict]:
 
 def create_user(email: str, full_name: str, is_admin: bool = False, created_by_id: Optional[int] = None, temp_password: Optional[str] = None) -> dict:
     engine = get_engine()
+    email_n = _normalize_email(email)
+
     with engine.connect() as conn:
         # check for existing email
-        existing = get_user_by_email(conn, email)
+        existing = get_user_by_email(conn, email_n)
         if existing:
             raise ValueError("email_exists")
 
         pw = temp_password if temp_password is not None else secrets.token_urlsafe(10)
         pw_hash = hash_password(pw)
         ins = users.insert().values(
-            email=email,
+            email=email_n,
             password_hash=pw_hash,
             full_name=full_name,
             is_active=True,
@@ -100,7 +111,7 @@ def create_user(email: str, full_name: str, is_admin: bool = False, created_by_i
         res = conn.execute(ins)
         conn.commit()
         new_id = res.inserted_primary_key[0]
-        return {"id": new_id, "email": email, "full_name": full_name, "temp_password": pw}
+        return {"id": new_id, "email": email_n, "full_name": full_name, "temp_password": pw}
 
 
 def reset_password(user_id: int) -> str:
@@ -108,7 +119,16 @@ def reset_password(user_id: int) -> str:
     with engine.connect() as conn:
         temp = secrets.token_urlsafe(10)
         pw_hash = hash_password(temp)
-        conn.execute(users.update().where(users.c.id == user_id).values(password_hash=pw_hash, must_change_password=True, updated_at=datetime.now(timezone.utc)))
+        # clear lockout attempts for this user (email) if present
+        row = conn.execute(users.select().where(users.c.id == user_id)).mappings().first()
+        if row and row.get("email"):
+            _clear_attempts(row["email"])
+
+        conn.execute(
+            users.update()
+            .where(users.c.id == user_id)
+            .values(password_hash=pw_hash, must_change_password=True, updated_at=datetime.now(timezone.utc))
+        )
         conn.commit()
         return temp
 
@@ -117,5 +137,14 @@ def change_password(user_id: int, new_password: str) -> None:
     engine = get_engine()
     with engine.connect() as conn:
         pw_hash = hash_password(new_password)
-        conn.execute(users.update().where(users.c.id == user_id).values(password_hash=pw_hash, must_change_password=False, updated_at=datetime.now(timezone.utc)))
+
+        row = conn.execute(users.select().where(users.c.id == user_id)).mappings().first()
+        if row and row.get("email"):
+            _clear_attempts(row["email"])
+
+        conn.execute(
+            users.update()
+            .where(users.c.id == user_id)
+            .values(password_hash=pw_hash, must_change_password=False, updated_at=datetime.now(timezone.utc))
+        )
         conn.commit()
