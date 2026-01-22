@@ -114,6 +114,67 @@ streamlit run main.py
 
 ---
 
+## Database migraties (Alembic)
+
+Deze app gebruikt Alembic voor database migraties. Dit maakt het mogelijk om je schema future-proof te beheren, zowel lokaal als op Supabase/Postgres.
+
+### Migratie uitvoeren (lokaal of productie)
+1. Zorg dat je `DATABASE_URL` correct staat (in `.streamlit/secrets.toml` of als environment variable).
+2. Genereer een nieuwe migratie op basis van je model:
+   ```bash
+   alembic revision --autogenerate -m "Jouw migratiebeschrijving"
+   ```
+3. Voer de migratie uit:
+   ```bash
+   alembic upgrade head
+   ```
+
+### Migratie recovery & rollback
+
+#### Rollback migratie
+Wil je een migratie terugdraaien (rollback), gebruik:
+```bash
+alembic downgrade -1
+```
+Of naar een specifieke revision:
+```bash
+alembic downgrade <revision_id>
+```
+
+#### Backup maken vóór migratie
+Voor Supabase/Postgres:
+- Maak een export via het Supabase dashboard (of via `pg_dump`):
+  ```bash
+  pg_dump --dbname=<DATABASE_URL> --file=backup.sql
+  ```
+- Herstel met:
+  ```bash
+  psql --dbname=<DATABASE_URL> --file=backup.sql
+  ```
+
+#### Bij mislukte migratie
+- Controleer je migratiebestand en database status.
+- Herstel eventueel met een backup.
+- Voer een rollback uit en probeer de migratie opnieuw.
+- Check of je `DATABASE_URL` en rechten correct zijn.
+
+Meer info: zie Alembic docs en Supabase backup handleiding.
+
+### Best practices
+- Gebruik altijd de pooler connection string van Supabase.
+- Test migraties eerst lokaal (SQLite) voordat je ze op productie draait.
+- Commit alleen migratiebestanden, nooit je secrets.
+- Bij schemawijzigingen: maak een nieuwe Alembic migration en voer deze uit vóór je de app update.
+
+### Troubleshooting
+- Foutmelding `Tenant or user not found`: check je `DATABASE_URL` en credentials.
+- Foutmelding `No changes detected`: je model en database zijn al in sync.
+- Foutmelding over permissions: controleer of je Supabase user voldoende rechten heeft.
+
+Meer info: zie `docs/DEPLOY_SUPABASE.md` voor Supabase-setup en connection string tips.
+
+---
+
 ## Testing
 
 Run the unit tests with pytest:
