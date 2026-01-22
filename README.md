@@ -2,6 +2,19 @@
 
 Streamlit app developed in phases (see `spec/phases.md`).
 
+## Dependency management
+
+- **Streamlit Cloud** uses `requirements.txt` for deployment. Only include runtime dependencies here (no test/dev tools).
+- For **local development and testing**, use `requirements-dev.txt` (includes pytest, test tools, etc.).
+- To install dev dependencies locally:
+  ```bash
+  pip install -r requirements-dev.txt
+  ```
+- To install only runtime dependencies (for production/Streamlit Cloud):
+  ```bash
+  pip install -r requirements.txt
+  ```
+
 ## Current status (Phase 1 foundation)
 - App skeleton + configuration helpers
 - Simple navigation (Home/Login/Protected)
