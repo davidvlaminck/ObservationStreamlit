@@ -1,5 +1,3 @@
-/.idea/
-
 # Streamlit secrets (DO NOT COMMIT)
 /.streamlit/secrets.toml
 
@@ -12,3 +10,5 @@ __pycache__/
 
 # Local DBs
 *.db
+
+.idea/

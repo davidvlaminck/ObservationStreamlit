@@ -2,6 +2,19 @@
 
 This project uses **SQLAlchemy Core** and reads the database connection from `DATABASE_URL`.
 
+## Dependency management
+
+- **Streamlit Cloud** uses `requirements.txt` for deployment. Only include runtime dependencies here (no test/dev tools).
+- For **local development and testing**, use `requirements-dev.txt` (includes pytest, test tools, etc.).
+- To install dev dependencies locally:
+  ```bash
+  pip install -r requirements-dev.txt
+  ```
+- To install only runtime dependencies (for production/Streamlit Cloud):
+  ```bash
+  pip install -r requirements.txt
+  ```
+
 The safest way to provide `DATABASE_URL` is via **Streamlit secrets**.
 
 > Don’t commit passwords/keys to git. Treat anything pasted into chat/logs as compromised and rotate it.
