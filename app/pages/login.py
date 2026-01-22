@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from app.state import get_auth_state, logout, set_next_route, is_dev_mode
-from app.ui_elements import render_material_card
+from app.ui_elements import render_material_card, redact_db_url
 from app import db, auth
 
 
@@ -17,7 +17,7 @@ def render() -> None:
     if is_dev_mode():
         with st.expander("Diagnose", expanded=False):
             st.caption("Welke database gebruikt deze run?")
-            st.code(db.DB_URL)
+            st.code(redact_db_url(db.DB_URL))
 
             try:
                 from sqlalchemy import select

@@ -2,13 +2,26 @@
 
 Streamlit app developed in phases (see `spec/phases.md`).
 
-## Phase 0 (current)
+## Current status (Phase 1 foundation)
 - App skeleton + configuration helpers
 - Simple navigation (Home/Login/Protected)
-- Protected area gated by session state (stub auth)
+- **Real authentication + database (SQLite via SQLAlchemy Core)**
+- Admin bootstrap (initial `admin/admin` with forced password change)
+- Admin → Users page for creating users and setting temporary passwords (no email/SMTP)
 - UI direction: Streamlit + **streamlit-elements** (Material UI components)
 
-> Phase 0 **does not implement real authentication** or a database yet.
+> Earlier in the project, “Phase 0” referred to a stub-only version (no DB/auth). The current codebase has moved beyond that.
+
+---
+
+## Production database (Supabase Postgres)
+
+This app can run on SQLite (local/tests) and Postgres (production). For Supabase setup, see:
+- `docs/DEPLOY_SUPABASE.md`
+
+Supabase UI hint: in the project dashboard, click **Connect** in the top bar and select **Pooler → Session** to get the correct connection string.
+
+**Important:** put your `DATABASE_URL` in Streamlit secrets (local `.streamlit/secrets.toml` and/or Streamlit Cloud secrets). Do not commit credentials.
 
 ---
 

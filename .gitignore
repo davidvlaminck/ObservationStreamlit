@@ -1,1 +1,14 @@
 /.idea/
+
+# Streamlit secrets (DO NOT COMMIT)
+/.streamlit/secrets.toml
+
+# Local virtualenv
+/.venv/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Local DBs
+*.db

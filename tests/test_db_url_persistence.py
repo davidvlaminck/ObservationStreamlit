@@ -10,7 +10,12 @@ if ROOT not in sys.path:
 
 
 def test_default_sqlite_url_anchored_to_repo_root(monkeypatch):
-    """The default DB should be stable even if the working directory changes."""
+    """The default DB should be stable even if the working directory changes.
+
+    This test must be hermetic: local developer Streamlit secrets (e.g. a
+    `.streamlit/secrets.toml` with DATABASE_URL) should not influence unit tests.
+    """
+    monkeypatch.setenv("IGNORE_STREAMLIT_SECRETS", "1")
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
     import app.db as db

@@ -40,7 +40,34 @@ def _default_sqlite_url() -> str:
     return f"sqlite:///{db_path}"
 
 
-DB_URL = os.environ.get("DATABASE_URL") or _default_sqlite_url()
+def _get_database_url_from_streamlit_secrets() -> Optional[str]:
+    """Try to read DATABASE_URL from Streamlit secrets.
+
+    This is intended for actual Streamlit runs. For hermetic unit tests / CLI tools,
+    you can disable secrets resolution by setting:
+
+    - IGNORE_STREAMLIT_SECRETS=1
+    """
+
+    if os.environ.get("IGNORE_STREAMLIT_SECRETS", "").strip() in {"1", "true", "True"}:
+        return None
+
+    try:
+        import streamlit as st  # type: ignore
+
+        value = st.secrets.get("DATABASE_URL")
+        if value:
+            return str(value).strip() or None
+    except Exception:
+        return None
+    return None
+
+
+DB_URL = (
+    os.environ.get("DATABASE_URL")
+    or _get_database_url_from_streamlit_secrets()
+    or _default_sqlite_url()
+)
 
 metadata = MetaData()
 
