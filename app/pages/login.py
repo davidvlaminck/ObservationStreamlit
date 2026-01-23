@@ -142,17 +142,12 @@ def render() -> None:
         if auth_state.must_change_password:
             st.info("Je logt in met een tijdelijk wachtwoord. Kies nu een nieuw wachtwoord.")
         else:
-            # Genereer een token-URL en toon deze + debug info
+            # Genereer een token-URL en zet deze direct in de URL, rerun de app
             raw_token = str(generate_url_token(user["id"]))
             token = base64.urlsafe_b64encode(raw_token.encode()).decode()
-            st.info(f"Token gegenereerd: {raw_token}")
-            st.info(f"Base64 token: {token}")
-            st.info(f"Huidige query params: {st.query_params}")
-            token_url = f"?token={token}"
-            # Open link in same tab using HTML anchor without target attribute
-            st.write(f'<a href="{token_url}">Klik hier om verder te gaan met token in de URI</a>', unsafe_allow_html=True)
-            st.write(f"Link: {token_url}")
-            st.stop()
+            st.query_params = {"token": token}
+            set_next_route(st.session_state, "Beveiligd")
+            st.rerun()
 
     # If user must change password, show change form
     if auth_state.is_authenticated and auth_state.must_change_password:
