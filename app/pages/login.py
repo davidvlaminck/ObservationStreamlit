@@ -1,13 +1,24 @@
 from __future__ import annotations
 
 import streamlit as st
+import urllib.parse
+import base64
 
 from app.state import get_auth_state, logout, set_next_route, is_dev_mode
 from app.ui_elements import render_material_card, redact_db_url
 from app import db, auth
+from app.auth import authenticate, AuthLocked, generate_url_token, check_url_token, get_url_tokens
 
 
 def render() -> None:
+    query_params = st.query_params
+    token = query_params.get("token", [None])[0]
+    auth_state = get_auth_state(st.session_state)
+    # Guard: als token in URL en gebruiker is ingelogd, direct door naar beveiligd
+    if token and auth_state.is_authenticated and not auth_state.must_change_password:
+        set_next_route(st.session_state, "Beveiligd")
+        st.rerun()
+
     st.title("Aanmelden")
 
     # Ensure DB is initialized and initial admin exists
@@ -40,7 +51,52 @@ def render() -> None:
                 st.caption("Diagnose info niet beschikbaar")
                 st.write(str(e))
 
-    auth_state = get_auth_state(st.session_state)
+    # Check for token in URL
+    query_params = st.query_params
+    token = query_params.get("token")  # FIX: get as string, not [None])[0]
+    st.write(f"[DEBUG] Token uit URL: {token}")
+    # Workaround: if token is present in query params but not in session, regenerate it for the current user
+    if token and token not in get_url_tokens() and auth_state.is_authenticated:
+        try:
+            decoded_token = base64.urlsafe_b64decode(token.encode()).decode()
+        except Exception:
+            decoded_token = token
+        # Regenerate and store token for current user
+        get_url_tokens()[decoded_token] = {"user_id": auth_state.user_id, "expires": db.datetime.utcnow() + db.timedelta(hours=1)}
+    if token:
+        try:
+            decoded_token = base64.urlsafe_b64decode(token.encode()).decode()
+        except Exception:
+            decoded_token = token
+        st.write(f"[DEBUG] Decoded token: {decoded_token}")
+        st.write(f"[DEBUG] URL_TOKENS: {get_url_tokens()}")
+        user_id = check_url_token(decoded_token)
+        st.write(f"[DEBUG] user_id from token: {user_id}")
+        import datetime
+        st.write(f"[DEBUG] Now (UTC): {datetime.datetime.utcnow()}")
+        if decoded_token in get_url_tokens():
+            st.write(f"[DEBUG] Token expiry: {get_url_tokens()[decoded_token]['expires']}")
+        if user_id:
+            # Fetch user info from DB
+            from app.db import get_engine, users
+
+            eng = db.get_engine()
+            with eng.connect() as conn:
+                row = conn.execute(users.select().where(users.c.id == user_id)).mappings().first()
+            if row:
+                auth_state.is_authenticated = True
+                auth_state.user_id = row["id"]
+                auth_state.email = row["email"]
+                auth_state.full_name = row.get("full_name")
+                auth_state.is_admin = bool(row.get("is_admin"))
+                auth_state.must_change_password = bool(row.get("must_change_password"))
+                st.success(f"Je bent automatisch ingelogd via token. Geldig tot: {get_url_tokens().get(decoded_token, {}).get('expires', 'onbekend')}")
+                set_next_route(st.session_state, "Beveiligd")
+                st.rerun()
+            else:
+                st.error("Token is geldig, maar gebruiker bestaat niet meer.")
+        else:
+            st.error("Token is ongeldig of verlopen.")
 
     # If already authenticated and everything is OK, offer logout and stop.
     if auth_state.is_authenticated and not auth_state.must_change_password:
@@ -76,7 +132,6 @@ def render() -> None:
             st.info("Wachtwoord vergeten? Een admin kan je wachtwoord resetten in Admin → Gebruikers.")
             st.info("Als je zelf de admin bent en je kan niet meer inloggen: `python scripts/create_admin.py --email <email> --reset`")
             return
-
         # populate session
         auth_state.is_authenticated = True
         auth_state.user_id = user["id"]
@@ -84,13 +139,20 @@ def render() -> None:
         auth_state.full_name = user.get("full_name")
         auth_state.is_admin = bool(user.get("is_admin"))
         auth_state.must_change_password = bool(user.get("must_change_password"))
-
         if auth_state.must_change_password:
             st.info("Je logt in met een tijdelijk wachtwoord. Kies nu een nieuw wachtwoord.")
         else:
-            # Send user to protected page after normal login
-            set_next_route(st.session_state, "Beveiligd")
-            st.rerun()
+            # Genereer een token-URL en toon deze + debug info
+            raw_token = str(generate_url_token(user["id"]))
+            token = base64.urlsafe_b64encode(raw_token.encode()).decode()
+            st.info(f"Token gegenereerd: {raw_token}")
+            st.info(f"Base64 token: {token}")
+            st.info(f"Huidige query params: {st.query_params}")
+            token_url = f"?token={token}"
+            # Open link in same tab using HTML anchor without target attribute
+            st.write(f'<a href="{token_url}">Klik hier om verder te gaan met token in de URI</a>', unsafe_allow_html=True)
+            st.write(f"Link: {token_url}")
+            st.stop()
 
     # If user must change password, show change form
     if auth_state.is_authenticated and auth_state.must_change_password:
@@ -103,8 +165,6 @@ def render() -> None:
                 st.error("Wachtwoorden komen niet overeen of zijn leeg")
             else:
                 auth.change_password(auth_state.user_id, new_pw)
-
-                # Re-authenticate to refresh session flags from DB, then route to protected
                 refreshed = auth.authenticate(auth_state.email or "", new_pw)
                 if refreshed:
                     auth_state.is_authenticated = True
@@ -114,15 +174,19 @@ def render() -> None:
                     auth_state.is_admin = bool(refreshed.get("is_admin"))
                     auth_state.must_change_password = bool(refreshed.get("must_change_password"))
                 else:
-                    # Fallback: clear session so user can log in again
                     logout(st.session_state)
                     st.error("Wachtwoord aangepast, maar her-authenticatie faalde. Probeer opnieuw aan te melden.")
                     st.rerun()
                     return
-
                 set_next_route(st.session_state, "Beveiligd")
                 st.success("Wachtwoord aangepast. Je bent nu aangemeld.")
                 st.rerun()
+
+    # Debug: Show raw query string and parsed value
+    import os
+
+    st.write(f"Raw query string: {os.environ.get('QUERY_STRING', 'N/A')}")
+    st.write(f"Parsed query params: {st.query_params}")
 
     render_material_card(
         "Opmerking",

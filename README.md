@@ -195,3 +195,34 @@ pytest -q
 - `spec/spec.md`  overall requirements
 - `spec/phases.md`  development roadmap
 - `spec/data_model.md`  schema draft (fill this in before Phase 2/3)
+
+---
+
+## Belangrijke beperking: login is niet persistent
+
+Streamlit session state is alleen geldig zolang het tabblad open is en de app actief blijft. Zodra je de pagina refresht, het tabblad sluit, of de server herstart, ben je uitgelogd. Ook na enkele minuten inactiviteit kan de session state verloren gaan.
+
+**Oplossingen voor productie:**
+- Gebruik een externe authenticatieprovider (OAuth, JWT, Auth0, Firebase, etc.) die persistentie biedt via cookies/tokens.
+- Bouw een eigen backend die een JWT of session-cookie zet en bij elke page-load controleert.
+- Voor dev/test kun je een tijdelijke URL-token gebruiken, maar dit is niet veilig voor productie.
+
+Meer info: zie de Streamlit docs over session state en authenticatie.
+
+## Veilige login-token via HTTPOnly cookie (backend API)
+
+Deze app bevat een minimal backend-auth API (`scripts/auth_api.py`) die login-tokens veilig in een HTTPOnly cookie zet. Dit voorkomt dat tokens uitlekken via JavaScript of URL's.
+
+**Hoe werkt het?**
+- Start de backend: `uvicorn scripts.auth_api:app --reload`
+- Streamlit frontend doet login via POST `/login` (email, password)
+- Backend zet een HTTPOnly cookie met een login-token (8 uur geldig)
+- Frontend checkt login-status via GET `/session`
+- Bij logout: POST `/logout` wist de cookie
+
+**Let op:**
+- In deze demo worden tokens in-memory opgeslagen. Gebruik in productie een database of Redis.
+- Zet `secure=True` in `set_cookie` voor productie (alleen HTTPS).
+- Je kunt de backend uitbreiden met echte gebruikersauthenticatie en database-integratie.
+
+Meer info: zie `scripts/auth_api.py` voor de API-endpoints.

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 import secrets
 import time
+import uuid
 
-from app.db import get_engine, users, get_user_by_email, hash_password, verify_password
+import streamlit as st
+
+from app.db import get_engine, users, get_user_by_email, hash_password, verify_password, login_tokens
 
 
 class AuthLocked(Exception):
@@ -17,6 +20,16 @@ LOGIN_ATTEMPTS: dict[str, dict] = {}
 MAX_ATTEMPTS = 5
 WINDOW_SECONDS = 60
 LOCK_SECONDS = 300
+
+# In-memory token store (Streamlit only, now in session_state)
+def get_url_tokens():
+    if "URL_TOKENS" not in st.session_state:
+        st.session_state.URL_TOKENS = {}
+    return st.session_state.URL_TOKENS
+TOKEN_VALIDITY = timedelta(hours=1)
+
+
+# Verwijder cookie helpers, want Streamlit ondersteunt dit niet.
 
 
 def _normalize_email(email: str) -> str:
@@ -148,3 +161,35 @@ def change_password(user_id: int, new_password: str) -> None:
             .values(password_hash=pw_hash, must_change_password=False, updated_at=datetime.now(timezone.utc))
         )
         conn.commit()
+
+
+# Genereer een login-token
+def generate_url_token(user_id: int) -> str:
+    import uuid
+    token = str(uuid.uuid4())
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    created = datetime.now(timezone.utc)
+    eng = get_engine()
+    with eng.connect() as conn:
+        conn.execute(login_tokens.insert().values(token=token, user_id=user_id, expires_at=expires, created_at=created))
+        conn.commit()
+    return token
+
+
+# Controleer of een token geldig is
+def check_url_token(token: str) -> int | None:
+    eng = get_engine()
+    with eng.connect() as conn:
+        row = conn.execute(login_tokens.select().where(login_tokens.c.token == token)).mappings().first()
+        if not row:
+            return None
+        # Fix: always compare offset-aware datetimes
+        from datetime import timezone
+        expires_at = row["expires_at"]
+        if expires_at.tzinfo is None:
+            # Assume UTC if naive
+            from datetime import timezone
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at < datetime.now(timezone.utc):
+            return None
+        return row["user_id"]

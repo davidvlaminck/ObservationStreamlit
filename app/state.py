@@ -55,3 +55,8 @@ def set_next_route(session_state: dict, route: str) -> None:
 def pop_next_route(session_state: dict) -> str | None:
     """Consume the one-time route override (if any)."""
     return session_state.pop(ROUTE_OVERRIDE_KEY, None)
+
+
+def is_admin(session_state: dict) -> bool:
+    state = get_auth_state(session_state)
+    return bool(state.is_authenticated and state.is_admin)

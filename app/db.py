@@ -126,11 +126,20 @@ observations = Table(
     Column("person_id", Integer, ForeignKey("persons.id"), nullable=False),
     Column("category_id", Integer, ForeignKey("categories.id"), nullable=False),
     Column("observed_at", Date, nullable=False),
-    Column("score", String),
-    Column("comment", Text),
-    Column("created_by_id", Integer, ForeignKey("users.id")),
+    Column("school_year_id", Integer, ForeignKey("school_years.id"), nullable=False),
+    Column("score", Integer, nullable=True),
+    Column("comment", Text, nullable=True),
     Column("created_at", DateTime, default=lambda: datetime.now(timezone.utc)),
     Column("updated_at", DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)),
+)
+
+login_tokens = Table(
+    "login_tokens",
+    metadata,
+    Column("token", String, primary_key=True),
+    Column("user_id", Integer, nullable=False),
+    Column("expires_at", DateTime, nullable=False),
+    Column("created_at", DateTime, nullable=False),
 )
 
 _engine: Optional[Engine] = None
