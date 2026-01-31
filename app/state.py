@@ -23,6 +23,7 @@ class AuthState:
 
 AUTH_STATE_KEY = "auth_state"
 ROUTE_OVERRIDE_KEY = "route_override"
+JUST_LOGGED_OUT_KEY = "just_logged_out"
 
 
 def is_dev_mode() -> bool:
@@ -45,6 +46,7 @@ def get_auth_state(session_state: dict) -> AuthState:
 
 def logout(session_state: dict) -> None:
     session_state[AUTH_STATE_KEY] = AuthState(is_authenticated=False)
+    session_state[JUST_LOGGED_OUT_KEY] = True
 
 
 def set_next_route(session_state: dict, route: str) -> None:

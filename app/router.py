@@ -20,6 +20,14 @@ def set_token_in_url(token: str):
     st.query_params = query_params
 
 
+def clear_token_in_url():
+    """Remove the token from the URL query parameters."""
+    query_params = dict(st.query_params)
+    if "token" in query_params:
+        del query_params["token"]
+        st.query_params = query_params
+
+
 def render_sidebar() -> str:
     """Render the sidebar navigation and handle route selection."""
     auth = get_auth_state(st.session_state)
@@ -50,9 +58,11 @@ def render_sidebar() -> str:
 
     selected = st.sidebar.radio("Ga naar", routes, index=idx, label_visibility="collapsed")
 
-    # Zet de token in de URL bij elke navigatie
-    if token:
+    # Only set the token in the URL if the user is authenticated
+    if token and auth.is_authenticated:
         set_token_in_url(token)
+    elif not auth.is_authenticated:
+        clear_token_in_url()
 
     return selected
 
@@ -61,8 +71,10 @@ def render_route(route: str) -> None:
     """Render the main content area based on the selected route."""
     auth = get_auth_state(st.session_state)
     token = get_token_from_url()
-    if token:
+    if token and auth.is_authenticated:
         set_token_in_url(token)
+    elif not auth.is_authenticated:
+        clear_token_in_url()
 
     # Enforce forced password change: user can only access the login screen.
     if auth.is_authenticated and auth.must_change_password and route != "Aanmelden":

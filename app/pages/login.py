@@ -14,8 +14,9 @@ def render() -> None:
     query_params = st.query_params
     token = query_params.get("token")
     auth_state = get_auth_state(st.session_state)
+    just_logged_out = st.session_state.pop("just_logged_out", None)
     # Guard: als token in URL en gebruiker is ingelogd, direct door naar beveiligd
-    if token and auth_state.is_authenticated and not auth_state.must_change_password:
+    if not just_logged_out and token and auth_state.is_authenticated and not auth_state.must_change_password:
         set_next_route(st.session_state, "Beveiligd")
         st.rerun()
 
@@ -52,6 +53,8 @@ def render() -> None:
     # Check for token in URL
     query_params = st.query_params
     token = query_params.get("token")
+    if just_logged_out:
+        token = None  # Ignore token for this rerun
     st.write(f"[DEBUG] Token uit URL: {token}")
     # Workaround: if token is present in query params but not in session, regenerate it for the current user
     if token and token not in get_url_tokens() and auth_state.is_authenticated:
@@ -99,6 +102,7 @@ def render() -> None:
         st.success(f"Je bent aangemeld als {auth_state.email}.")
         if st.button("Afmelden", type="secondary"):
             logout(st.session_state)
+            st.query_params = {}  # Clear token from URL
             st.rerun()
         return
 
@@ -108,6 +112,7 @@ def render() -> None:
         st.warning("Je bent aangemeld, maar je moet eerst je wachtwoord wijzigen voordat je verder kan.")
         if st.button("Afmelden", type="secondary"):
             logout(st.session_state)
+            st.query_params = {}  # Clear token from URL
             st.rerun()
 
     with st.form("login_form"):
