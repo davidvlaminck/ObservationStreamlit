@@ -23,6 +23,7 @@ LOCK_SECONDS = 300
 
 # In-memory token store (Streamlit only, now in session_state)
 def get_url_tokens():
+    """Get or initialize the in-memory URL token store in session_state."""
     if "URL_TOKENS" not in st.session_state:
         st.session_state.URL_TOKENS = {}
     return st.session_state.URL_TOKENS
@@ -33,10 +34,12 @@ TOKEN_VALIDITY = timedelta(hours=1)
 
 
 def _normalize_email(email: str) -> str:
+    """Normalize email to lowercase and strip whitespace."""
     return (email or "").strip().lower()
 
 
 def _record_failed_attempt(email: str) -> None:
+    """Record a failed login attempt for rate limiting."""
     email = _normalize_email(email)
     now = time.time()
     entry = LOGIN_ATTEMPTS.get(email)
@@ -54,12 +57,14 @@ def _record_failed_attempt(email: str) -> None:
 
 
 def _clear_attempts(email: str) -> None:
+    """Clear failed login attempts for a user."""
     email = _normalize_email(email)
     if email in LOGIN_ATTEMPTS:
         del LOGIN_ATTEMPTS[email]
 
 
 def _is_locked(email: str) -> bool:
+    """Check if a user is currently locked out due to failed attempts."""
     email = _normalize_email(email)
     entry = LOGIN_ATTEMPTS.get(email)
     if not entry:
@@ -75,6 +80,7 @@ def _is_locked(email: str) -> bool:
 
 
 def authenticate(email: str, password: str) -> Optional[dict]:
+    """Authenticate a user by email and password. Returns user dict or None."""
     email = _normalize_email(email)
 
     # simple lockout check
@@ -99,6 +105,7 @@ def authenticate(email: str, password: str) -> Optional[dict]:
 
 
 def create_user(email: str, full_name: str, is_admin: bool = False, created_by_id: Optional[int] = None, temp_password: Optional[str] = None) -> dict:
+    """Create a new user in the system."""
     engine = get_engine()
     email_n = _normalize_email(email)
 
@@ -128,6 +135,7 @@ def create_user(email: str, full_name: str, is_admin: bool = False, created_by_i
 
 
 def reset_password(user_id: int) -> str:
+    """Reset the password for a user, returning the new temporary password."""
     engine = get_engine()
     with engine.connect() as conn:
         temp = secrets.token_urlsafe(10)
@@ -147,6 +155,7 @@ def reset_password(user_id: int) -> str:
 
 
 def change_password(user_id: int, new_password: str) -> None:
+    """Change the password for a user."""
     engine = get_engine()
     with engine.connect() as conn:
         pw_hash = hash_password(new_password)
@@ -165,7 +174,7 @@ def change_password(user_id: int, new_password: str) -> None:
 
 # Genereer een login-token
 def generate_url_token(user_id: int) -> str:
-    import uuid
+    """Generate a URL token for passwordless login."""
     token = str(uuid.uuid4())
     expires = datetime.now(timezone.utc) + timedelta(hours=1)
     created = datetime.now(timezone.utc)
@@ -178,6 +187,7 @@ def generate_url_token(user_id: int) -> str:
 
 # Controleer of een token geldig is
 def check_url_token(token: str) -> int | None:
+    """Check if a URL token is valid and not expired."""
     eng = get_engine()
     with eng.connect() as conn:
         row = conn.execute(login_tokens.select().where(login_tokens.c.token == token)).mappings().first()

@@ -1,3 +1,5 @@
+# Runtime dependencies for ObservationStreamlit
+# Only include packages needed to run the app (no test/dev tools)
 streamlit>=1.30,<2.0
 streamlit-elements>=0.1.0
 sqlalchemy>=2.0,<3.0

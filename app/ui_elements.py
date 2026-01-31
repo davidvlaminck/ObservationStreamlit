@@ -9,7 +9,7 @@ This module also contains small helpers for safe diagnostics output.
 """
 
 from typing import Callable
-
+import contextlib
 import streamlit as st
 
 
@@ -33,6 +33,8 @@ def redact_db_url(url: str) -> str:
 
 
 def elements_available() -> bool:
+    """Return True if streamlit-elements is installed and importable."""
+
     try:
         import streamlit_elements  # noqa: F401
 
@@ -54,18 +56,16 @@ def render_material_card(title: str, body: str, *, action_label: str | None = No
         if action_label and on_action:
             if st.button(action_label):
                 on_action()
+        # Use a nullcontext to satisfy type checker
+        with contextlib.nullcontext():
+            pass
         return
-
     from streamlit_elements import elements, mui
-
     with elements(f"card_{title}"):
         children = [
             mui.Typography(title, variant="h6"),
             mui.Typography(body, variant="body2", sx={"mt": 1}),
         ]
         if action_label and on_action:
-            # streamlit-elements callbacks are JS-side; for Phase 0 we keep it simple.
-            # We'll wire true Python callbacks in later phases if needed.
             children.append(mui.Button(action_label, variant="contained", sx={"mt": 2}))
-
         mui.Card(mui.CardContent(*children), sx={"maxWidth": 650, "m": 1, "borderRadius": 3})

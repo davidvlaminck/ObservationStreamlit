@@ -1,26 +1,27 @@
 from __future__ import annotations
 
 import streamlit as st
-import urllib.parse
 
 from app.pages import home, login, protected, users, categories
 from app.state import get_auth_state, pop_next_route
 
 
 def get_token_from_url():
+    """Extract the token from the URL query parameters, if present."""
     query_params = st.query_params
-    token = query_params.get("token")  # FIX: get as string, not [None])[0]
+    token = query_params.get("token")
     return token
 
 
 def set_token_in_url(token: str):
-    # Use only st.query_params API (no experimental_*)
+    """Set the token in the URL query parameters using Streamlit's query_params API."""
     query_params = dict(st.query_params)
-    query_params["token"] = token  # FIX: assign as string, not [token]
+    query_params["token"] = token
     st.query_params = query_params
 
 
 def render_sidebar() -> str:
+    """Render the sidebar navigation and handle route selection."""
     auth = get_auth_state(st.session_state)
     token = get_token_from_url()
 
@@ -57,6 +58,7 @@ def render_sidebar() -> str:
 
 
 def render_route(route: str) -> None:
+    """Render the main content area based on the selected route."""
     auth = get_auth_state(st.session_state)
     token = get_token_from_url()
     if token:
@@ -78,7 +80,7 @@ def render_route(route: str) -> None:
 
     if route == "Beveiligd":
         if not auth.is_authenticated:
-            st.warning("Meld je aan om deze pagina te bekijken.")
+            st.warning("Je moet ingelogd zijn om deze pagina te bekijken.")
             login.render()
             return
         protected.render()
@@ -86,16 +88,19 @@ def render_route(route: str) -> None:
 
     if route == "Admin: Gebruikers":
         if not auth.is_authenticated or not auth.is_admin:
-            st.warning("Adminrechten vereist")
+            st.warning("Alleen admins mogen gebruikers beheren.")
+            login.render()
             return
         users.render()
         return
 
     if route == "Admin: Categorieën":
         if not auth.is_authenticated or not auth.is_admin:
-            st.warning("Adminrechten vereist")
+            st.warning("Alleen admins mogen categorieën beheren.")
+            login.render()
             return
         categories.render()
         return
 
-    st.error(f"Onbekende pagina: {route}")
+    # Default fallback
+    home.render()

@@ -1,6 +1,6 @@
 """
 Admin: Category management page (categoriebeheer)
-- List categories (hierarchical)
+- List categories (hierarchical, visually indented)
 - Create, edit, delete categories
 - Only accessible to admins
 - Uses streamlit-elements for UI
@@ -9,29 +9,24 @@ import streamlit as st
 from app import db, state
 from sqlalchemy import select, insert, update, delete
 
-# Helper: fetch categories as tree
-
 def fetch_categories(conn):
+    """Fetch all categories and build a parent_id -> children tree."""
     cats = conn.execute(select(db.categories)).mappings().all()
-    # Build tree: parent_id -> children
     tree = {}
     for cat in cats:
         tree.setdefault(cat["parent_id"], []).append(cat)
     return tree
 
-# Helper: render category tree
-
 def render_category_tree(tree, parent_id=None, level=0):
+    """Recursively render the category tree with indentation and parent/child structure."""
     for cat in tree.get(parent_id, []):
-        indent = "".join(["│   " for _ in range(level)])
-        bullet = "├── " if level > 0 else ""
-        parent_dbg = f"[{cat['parent_id']}]" if cat['parent_id'] is not None else "[root]"
-        st.markdown(f"{indent}{bullet}**{cat['label']}** {parent_dbg} <span style='color:gray'>({cat['key']})</span>", unsafe_allow_html=True)
+        indent = "&nbsp;&nbsp;&nbsp;" * level
+        bullet = "\u2022 " if level > 0 else ""
+        st.markdown(f"{indent}{bullet}**{cat['label']}** <span style='color:gray'>({cat['key']})</span>", unsafe_allow_html=True)
         render_category_tree(tree, cat["id"], level + 1)
 
-# Main page
-
 def show():
+    """Main entry point for the category management admin page."""
     st.title("Categoriebeheer (Admin)")
     if not state.is_admin(st.session_state):
         st.error("Alleen admins mogen categorieën beheren.")
@@ -80,7 +75,7 @@ def show():
                 if delete_btn:
                     conn.execute(delete(db.categories).where(db.categories.c.id == cat["id"]))
                     conn.commit()
-                    st.warning("Categorie verwijderd.")
+                    st.success("Categorie verwijderd.")
                     st.rerun()
 
 # For router integration

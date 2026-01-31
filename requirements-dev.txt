@@ -1,3 +1,5 @@
+# Dev/test dependencies for ObservationStreamlit
+# Includes all runtime dependencies plus test/dev tools
 streamlit>=1.30,<2.0
 streamlit-elements>=0.1.0
 sqlalchemy>=2.0,<3.0
