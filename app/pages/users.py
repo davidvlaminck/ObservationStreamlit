@@ -115,4 +115,4 @@ def render() -> None:
             if cols[2].button("Admin\naan/uit", key=f"toggle_{r['id']}"):
                 conn.execute(users.update().where(users.c.id == r["id"]).values(is_admin=not r["is_admin"]))
                 conn.commit()
-                st.experimental_rerun()
+                st.rerun()

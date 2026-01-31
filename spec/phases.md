@@ -235,7 +235,12 @@ We’ll use two categories of automated tests:
 - User self-registration and password recovery.
 - Advanced visualization options.
 - Integration with third-party APIs for enhanced functionality.
+- Add a button in the admin or data viewing UI that allows the user to export all production data (all observations, users, categories, etc.) into an Excel (.xlsx) file.
+- The export should include all relevant fields and be formatted for easy analysis.
+- The button should be visible only to admins.
+- The export should be generated on demand and downloaded directly from the app.
 
 **Acceptance Criteria**
 - New features don’t weaken authentication or expose data.
 - Permissions/roles are introduced if needed before adding sensitive capabilities (e.g., exports/admin tools).
+- Admins can export production data to Excel without exposing the functionality to regular users.
