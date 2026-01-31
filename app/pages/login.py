@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import streamlit as st
-import urllib.parse
 import base64
+from datetime import datetime, timedelta, timezone
 
 from app.state import get_auth_state, logout, set_next_route, is_dev_mode
 from app.ui_elements import render_material_card, redact_db_url
 from app import db, auth
-from app.auth import authenticate, AuthLocked, generate_url_token, check_url_token, get_url_tokens
+from app.auth import generate_url_token, check_url_token, get_url_tokens
 
 
 def render() -> None:
     query_params = st.query_params
-    token = query_params.get("token", [None])[0]
+    token = query_params.get("token")
     auth_state = get_auth_state(st.session_state)
     # Guard: als token in URL en gebruiker is ingelogd, direct door naar beveiligd
     if token and auth_state.is_authenticated and not auth_state.must_change_password:
@@ -29,10 +29,8 @@ def render() -> None:
         with st.expander("Diagnose", expanded=False):
             st.caption("Welke database gebruikt deze run?")
             st.code(redact_db_url(db.DB_URL))
-
             try:
                 from sqlalchemy import select
-
                 eng = db.get_engine()
                 with eng.connect() as conn:
                     admin_row = conn.execute(select(db.users).where(db.users.c.email == "admin")).mappings().first()
@@ -53,7 +51,7 @@ def render() -> None:
 
     # Check for token in URL
     query_params = st.query_params
-    token = query_params.get("token")  # FIX: get as string, not [None])[0]
+    token = query_params.get("token")
     st.write(f"[DEBUG] Token uit URL: {token}")
     # Workaround: if token is present in query params but not in session, regenerate it for the current user
     if token and token not in get_url_tokens() and auth_state.is_authenticated:
@@ -62,7 +60,7 @@ def render() -> None:
         except Exception:
             decoded_token = token
         # Regenerate and store token for current user
-        get_url_tokens()[decoded_token] = {"user_id": auth_state.user_id, "expires": db.datetime.utcnow() + db.timedelta(hours=1)}
+        get_url_tokens()[decoded_token] = {"user_id": auth_state.user_id, "expires": datetime.now(timezone.utc) + timedelta(hours=1)}
     if token:
         try:
             decoded_token = base64.urlsafe_b64decode(token.encode()).decode()
@@ -72,14 +70,12 @@ def render() -> None:
         st.write(f"[DEBUG] URL_TOKENS: {get_url_tokens()}")
         user_id = check_url_token(decoded_token)
         st.write(f"[DEBUG] user_id from token: {user_id}")
-        import datetime
-        st.write(f"[DEBUG] Now (UTC): {datetime.datetime.utcnow()}")
+        st.write(f"[DEBUG] Now (UTC): {datetime.now(timezone.utc)}")
         if decoded_token in get_url_tokens():
             st.write(f"[DEBUG] Token expiry: {get_url_tokens()[decoded_token]['expires']}")
         if user_id:
             # Fetch user info from DB
-            from app.db import get_engine, users
-
+            from app.db import users
             eng = db.get_engine()
             with eng.connect() as conn:
                 row = conn.execute(users.select().where(users.c.id == user_id)).mappings().first()
@@ -122,11 +118,10 @@ def render() -> None:
     if submit:
         try:
             user = auth.authenticate(email, password)
-        except auth.AuthLocked:
+        except Exception:
             st.error("Te veel mislukte pogingen. Deze account is tijdelijk geblokkeerd.")
             st.info("Admin herstel (zonder e-mail): reset je wachtwoord via de CLI: `python scripts/create_admin.py --email <email> --reset`")
             return
-
         if not user:
             st.error("Ongeldige aanmeldgegevens")
             st.info("Wachtwoord vergeten? Een admin kan je wachtwoord resetten in Admin → Gebruikers.")
@@ -174,14 +169,6 @@ def render() -> None:
                     st.rerun()
                     return
                 set_next_route(st.session_state, "Beveiligd")
-                st.success("Wachtwoord aangepast. Je bent nu aangemeld.")
-                st.rerun()
-
-    # Debug: Show raw query string and parsed value
-    import os
-
-    st.write(f"Raw query string: {os.environ.get('QUERY_STRING', 'N/A')}")
-    st.write(f"Parsed query params: {st.query_params}")
 
     render_material_card(
         "Opmerking",
