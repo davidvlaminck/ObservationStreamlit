@@ -13,6 +13,11 @@ def render() -> None:
     st.title("Beveiligd")
     st.caption("Fase 0 stub: placeholder voor beveiligde zone.")
 
+    st.write("\nGa naar:")
+    if st.button("Observaties bekijken"):
+        st.session_state["route_override"] = "Observaties"
+        st.rerun()
+
     # Diagnostics (dev-only)
     if is_dev_mode():
         with st.expander("Diagnose", expanded=False):

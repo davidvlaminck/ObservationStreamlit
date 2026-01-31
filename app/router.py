@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from app.pages import home, login, protected, users, categories
+from app.pages import home, login, protected, users, categories, observations
 from app.state import get_auth_state, pop_next_route
 
 
@@ -43,6 +43,7 @@ def render_sidebar() -> str:
         idx = 1
     elif auth.is_authenticated:
         routes.append("Beveiligd")
+        routes.append("Observaties")
         if auth.is_admin:
             routes.append("Admin: Gebruikers")
             routes.append("Admin: Categorieën")
@@ -112,6 +113,14 @@ def render_route(route: str) -> None:
             login.render()
             return
         categories.render()
+        return
+
+    if route == "Observaties":
+        if not auth.is_authenticated:
+            st.warning("Je moet ingelogd zijn om deze pagina te bekijken.")
+            login.render()
+            return
+        observations.render()
         return
 
     # Default fallback

@@ -209,3 +209,21 @@ def verify_password(candidate: str, password_hash: str) -> bool:
 
 def hash_password(password: str) -> str:
     return _pbkdf2_hash(password)
+
+
+def get_observations(conn, *, start_date=None, end_date=None, category_id=None, text=None, limit=50, offset=0):
+    """Fetch observations with optional filters and pagination."""
+    stmt = select(observations)
+    filters = []
+    if start_date:
+        filters.append(observations.c.observed_at >= start_date)
+    if end_date:
+        filters.append(observations.c.observed_at <= end_date)
+    if category_id:
+        filters.append(observations.c.category_id == category_id)
+    if text:
+        filters.append(observations.c.comment.ilike(f"%{text}%"))
+    if filters:
+        stmt = stmt.where(*filters)
+    stmt = stmt.order_by(observations.c.observed_at.desc()).limit(limit).offset(offset)
+    return conn.execute(stmt).mappings().all()
